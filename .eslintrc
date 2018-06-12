@@ -6,7 +6,7 @@
         "flowtype"
     ],
     "rules": {
-        "flowtype/require-parameter-type": 4
+        "flowtype/require-parameter-type": 2
     },
     "parser": "babel-eslint"
 }
