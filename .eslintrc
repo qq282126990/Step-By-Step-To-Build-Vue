@@ -1,0 +1,12 @@
+{
+    "extends": "standard",
+    "plugins": [
+        "standard",
+        "promise",
+        "flowtype"
+    ],
+    "rules": {
+        "flowtype/require-parameter-type": 4
+    },
+    "parser": "babel-eslint"
+}

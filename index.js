@@ -1,10 +1,9 @@
 // @flow
-
 function foo(x: ?number): string {
     if (x) {
         return x;
     }
-    return "default string";
+    return "defflow startault string";
 }
 
-foo()
+foo(1);
