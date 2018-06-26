@@ -1,11 +1,9 @@
 [ignore]
+.*/node_modules/.*
 
 [include]
 
 [libs]
-
-[lints]
+flow
 
 [options]
-
-[strict]
