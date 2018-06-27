@@ -1,6 +1,6 @@
 const fs = require('fs'); // node 模块主要处理文件的读写、复制、s删除、重命名等操作
 const path = require('path'); // 用于处理文件路径
-const zlib = require('zlib')； // 用于gzip压缩
+const zlib = require('zlib');  // 用于gzip压缩
 const rollup = require('rollup'); // 引入rollup.js
 const uglify = require('uglify-js'); // 一个JavaScript解析器，缩小器，压缩器工具包
 

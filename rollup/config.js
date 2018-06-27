@@ -7,7 +7,7 @@ const cjs = require('rollup-plugin-commonjs');
 // 将CommonJS依赖关系包含在中node_modules
 const node = require('rollup-plugin-node-resolve');
 const replace = require('rollup-plugin-replace'); // 在捆绑文件时替换文件中的字符串。
-const flow = require('rollup-plugin-flow-no-whitespace')； // 插件用来去掉flow使用的类型检查代码
+const flow = require('rollup-plugin-flow-no-whitespace');  // 插件用来去掉flow使用的类型检查代码
 const version = process.env.VERSION || require('../package.json').version; // 版本号
 
 
@@ -47,7 +47,7 @@ const builds = {
     // 屬性構建的格式
     format: 'umd',
     // 構建方式
-    env: 'development'
+    env: 'development',
     alias: {
       he: './entity-decoder'
     }
@@ -81,7 +81,7 @@ function genConfig(name) {
   // 判断如果有构建方式就把构建方式写入 config 公共配置构建模式
   if (opts.env) {
     config.plugins.push(replace({
-      'process.env.NODE_ENV': JSON.stringify(opts.env);
+      'process.env.NODE_ENV': JSON.stringify(opts.env)
     }));
   }
 
