@@ -1,5 +1,7 @@
 [ignore]
 .*/node_modules/.*
+.*/types/
+./types
 
 [include]
 
@@ -7,3 +9,4 @@
 flow
 
 [options]
+suppress_comment= \\(.\\|\n\\)*\\flow-disable-line

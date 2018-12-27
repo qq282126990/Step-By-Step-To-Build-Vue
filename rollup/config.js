@@ -13,7 +13,6 @@ const version = process.env.VERSION || require('../package.json').version; // �
 
 const aliases = require('./alias');
 
-
 // resolve 函數 传入参数 p 通过 / 分割成数组,
 // 然后取数组的第一个元素设置为base
 // {p} web-full-dev
@@ -29,7 +28,6 @@ const resolve = p => {
     return path.resolve(__dirname, '../', p)
   }
 }
-
 
 /**
  * {entry}  表示構建入口的js 文件地址
@@ -65,11 +63,14 @@ function genConfig(name) {
     input: opts.entry,
     // 插件相关配置
     plugins: [
+      replace({
+        __VERSION__: version
+      }),
       flow(),
       buble(),
       // 解析最终路径 
       alias(Object.assign({}, aliases, opts.alias))
-    ],  
+    ].concat(opts.plugins || []),  
     // 输出地址
     output: {
       file: opts.dest,
@@ -93,8 +94,6 @@ function genConfig(name) {
 
   return config;
 }
-
-
 
 
 // 根据 package.json中 指定的process.env.TARGET 经行不同的打包配置

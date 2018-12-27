@@ -1,7 +1,7 @@
 {
   "name": "my-project",
   "version": "1.0.0",
-  "main": "lib/index.js",
+  "main": "dist/vue.js",
   "scripts": {
     "flow": "flow",
     "dev": "rollup -w -c rollup/config.js --environment TARGET:web-full-dev",
