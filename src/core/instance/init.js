@@ -47,17 +47,17 @@ export function initMixin (Vue: Class<Component>) {
                   // 并将 vm.constructor 作为参数传递进去。
                   // 第二个参数 options 就是我们调用 Vue 构造函数时透传进来的对象，
                   // 第三个参数是当前 Vue 实例
-                  // vm.$options = mergeOptions(
-                  //       resolveConstructorOptions(vm.constructor),
-                  //       options || {},
-                  //       vm
-                  // )
+                  vm.$options = mergeOptions(
+                        resolveConstructorOptions(vm.constructor),
+                        options || {},
+                        vm
+                  )
             }
-            // vm.$options = mergeOptions(
-            //       resolveConstructorOptions(vm.constructor),
-            //       options || {},
-            //       vm
-            // )
+            vm.$options = mergeOptions(
+                  resolveConstructorOptions(vm.constructor),
+                  options || {},
+                  vm
+            )
 
             /* istanbul ignore if */
             // 在非生产环境下，并且 config.performance 和 mark 都为真，那么才执行里面的代码
@@ -80,10 +80,10 @@ export function resolveConstructorOptions(Ctor: Class<Component>){
 
       // 判断  当前选项是否是子类
       // super 这个属性是与 Vue.extend 有关系的
-      // if(Ctor.super) {
+      if(Ctor.super) {
             // 递归调用了自身,此时参数是构造者的父类
-            // const superOptions = resolveConstructorOptions(Ctor.super);
-      // }
+            const superOptions = resolveConstructorOptions(Ctor.super);
+      }
 
       return options;
 }

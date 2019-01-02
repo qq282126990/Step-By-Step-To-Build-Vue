@@ -2,10 +2,12 @@
 declare class Component {
       // constructor information
       static options: Object;
-      
+      static super: Class<Component>;
+
       //公共属性
       $data: Object;
       $props: Object;
+      $options: ComponentOptions;
 
       // 私有属性
       _uid: number | string;

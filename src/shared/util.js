@@ -119,3 +119,19 @@ const _toString = Object.prototype.toString
 export function isPlainObject (obj: any): boolean {
       return _toString.call(obj) === '[object Object]';
 }
+
+/**
+ * 获取值的原始类型字符串，例如 [object Object]
+ */
+export function toRawType (value: any): string {
+      return _toString.call(value).slice(8, -1);
+}
+
+/**
+ * 检查对象 obj 是否具有属性值key
+ */
+
+const hasOwnProperty = Object.prototype.hasOwnProperty;
+export function hasOwn (obj: Object | Array<*>, key: string): boolean {
+      return hasOwnProperty.call(obj, key);
+}
