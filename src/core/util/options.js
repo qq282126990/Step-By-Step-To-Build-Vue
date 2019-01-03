@@ -2,6 +2,8 @@
 import config from '../config';
 import { isBuiltInTag, camelize, isPlainObject, toRawType, extend, hasOwn } from '../../shared/util'
 import { set } from '../observer/index'
+import { LIFECYCLE_HOOKS, ASSET_TYPES } from '../../shared/constants'
+import { nativeWatch } from './env'
 
 /**
  * 默认的策略
@@ -75,7 +77,7 @@ function mergeData (to: Object, from: ?Object): Object {
                   isPlainObject(toVal) &&
                   isPlainObject(fromVal)
             ) {
-                  mergeData(toVal,fromVal)
+                  mergeData(toVal, fromVal)
             }
 
       }
@@ -177,6 +179,190 @@ strats.data = function (
       return mergeDataOrFn(parentVal, childVal, vm)
 }
 
+
+/**
+ * Hooks and props 合并为数组
+ * return (是否有 childVal，即判断组件的选项中是否有对应名字的生命周期钩子函数)
+  ? 如果有 childVal 则判断是否有 parentVal
+    ? 如果有 parentVal 则使用 concat 方法将二者合并为一个数组
+    : 如果没有 parentVal 则判断 childVal 是不是一个数组
+      ? 如果 childVal 是一个数组则直接返回
+      : 否则将其作为数组的元素，然后返回数组
+  : 如果没有 childVal 则直接返回 parentVal
+ */
+function mergeHook (
+      parentVal: ?Array<Function>,
+      childVal: ?Function | ?Array<Function>
+): ?Array<Function> {
+      return childVal
+            ? parentVal
+                  ? parentVal.concat(childVal)
+                  : Array.isArray(childVal)
+                        ? childVal
+                        : [childVal]
+            : parentVal
+}
+
+// 遍历  LIFECYCLE_HOOKS 常量
+// 在 strats 策略对象上添加用来合并各个生命周期钩子选项的策略函数，
+// 并且这些生命周期钩子选项的策略函数相同：都是 mergeHook 函数。
+LIFECYCLE_HOOKS.forEach(hook => {
+      strats[hook] = mergeHook
+})
+
+
+/**
+*资产
+*
+*当存在vm（实例创建）时，我们需要这样做
+*构造函数选项，实例之间的三向合并
+*选项和父选项。
+*/
+function mergeAssets (
+      parentVal: ?Object,
+      childVal: ?Object,
+      vm: ?Component,
+      key: string
+): Object {
+      // 以 parentVal 为原型创建对象 res
+      const res = Object.create(parentVal || null)
+
+      // 判断是否有 childVal，
+      // 如果有的话使用 extend 函数将 childVal 上的属性混合到 res 对象上并返回
+      if (childVal) {
+            // 检测 childVal 是不是一个纯对象的，如果不是纯对象会给你一个警告
+            process.env.NODE_ENV !== 'production' && assertObjectType(key, childVal, vm)
+            return extend(res, childVal)
+      }
+      else {
+            return res
+      }
+}
+
+// 在 strats 策略对象上添加与资源选项名字相同的策略函数，
+// 用来分别合并处理三类资源
+// 父子选项将以原型链的形式被处理，正是因为这样我们才能够在任何地方都使用内置组件、指令等。
+ASSET_TYPES.forEach(function (type) {
+      strats[type + 's'] = mergeAssets
+})
+
+
+
+// 检测 childVal 是不是一个纯对象的
+function assertObjectType (name: string, value: any, vm: ?Component) {
+      if (!isPlainObject(value)) {
+            console.warn(
+                  `Invalid value for option "${name}": expected an Object, ` +
+                  `but got ${toRawType(value)}.`,
+                  vm
+            )
+      }
+}
+
+
+// 在 strats 策略对象上添加 watch 策略函数
+// 合并处理 watch 选项的
+strats.watch = function (
+      parentVal: ?Object,
+      childVal: ?Object,
+      vm?: Component,
+      key: string
+): ?Object {
+      // 当发现组件选项是浏览器原生的 watch 时，
+      // 那说明用户并没有提供 Vue 的 watch 选项，直接重置为 undefined
+      if (parentVal === nativeWatch) parentVal = undefined
+      if (childVal === nativeWatch) childVal = undefined
+
+      // 检测了是否有 childVal，即组件选项是否有 watch 选项，如果没有的话，
+      // 直接以 parentVal 为原型创建对象并返回
+      if (!childVal) return Object.create(parentVal || null)
+
+      // 对 childVal 进行类型检测，检测其是否是一个纯对象
+      if (process.env.NODE_ENV !== 'production') {
+            assertObjectType(key, childVal, vm)
+      }
+
+      // 是否有 parentVal，如果没有的话则直接返回 childVal，
+      // 即直接使用组件选项的 watch
+      // Vue.options 并没有 watch 选项，所以逻辑将直接在 strats.watch 函数的这句话中返回
+      // 是一个函数
+      if (!parentVal) return childVal
+
+
+
+      // 有 parentVal 就是 Sub.options 才执行
+
+      // 此时 parentVal 以及 childVal 都将存在，那么就需要做合并处理
+
+      // 定义 ret 常量，其值为一个对象
+      const ret = {}
+      // 将 parentVal 的属性混合到 ret 中，后面处理的都将是 ret 对象，最后返回的也是 ret 对象
+      extend(ret, parentVal)
+
+      // 遍历 childVal
+      for (const key in childVal) {
+            // 由于遍历的是 childVal，所以 key 是子选项的 key，父选项中未必能获取到值，所以 parent 未必有值
+            let parent = ret[key]
+            // child 是肯定有值的，因为遍历的就是 childVal 本身
+            const child = childVal[key]
+            // 这个 if 分支的作用就是如果 parent 存在，就将其转为数组
+            if (parent && !Array.isArray(parent)) {
+                  parent = [parent]
+            }
+            ret[key] = parent
+                  // 最后，如果 parent 存在，此时的 parent 应该已经被转为数组了，所以直接将 child concat 进去
+                  ? parent.concat(child)
+                  : Array.isArray(child) ? child : [child]
+
+
+      }
+
+      return ret
+}
+
+/**
+ *其他对象
+ 在 strats 策略对象上添加 props、methods、inject 以及 computed 策略函数
+ 结构都是纯对象
+ */
+strats.props =
+      strats.methods =
+      strats.inject =
+      strats.computed = function (
+            parentVal: ?Object,
+            childVal: ?Object,
+            vm?: Component,
+            key: string
+      ): ?Object {
+            // 如果存在 childVal，那么在非生产环境下要检查 childVal 的类型
+            // 保证其类型是纯对象
+            if (childVal && process.env.NODE_ENV !== 'production') {
+                  assertObjectType(key, childVal, vm)
+            }
+
+            // parentVal 不存在的情况下直接返回 childVal
+            if (!parentVal) {
+                  return childVal
+            }
+
+            // 如果 parentVal 存在，则创建 ret 对象，
+            // 然后分别将 parentVal 和 childVal 的属性混合到 ret 中，
+            // 注意：由于 childVal 将覆盖 parentVal 的同名属性
+            const ret = Object.create(null)
+
+            // 如果父子选项中有相同的键，那么子选项会把父选项覆盖掉。
+            extend(ret, parentVal)
+            if (childVal) {
+                  extend(ret, childVal)
+            }
+
+            // 返回 ret 对象
+            return ret
+      }
+
+
+// provide 选项的合并策略与 data 选项的合并策略相同，都是使用 mergeDataOrFn 函数
+strats.provide = mergeDataOrFn;
 
 /**
  * 合并两个选项对象为一个新的对象，这个函数在实例化和继承的时候都有用到，

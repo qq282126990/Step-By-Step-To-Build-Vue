@@ -80,10 +80,10 @@ export function resolveConstructorOptions(Ctor: Class<Component>){
 
       // 判断  当前选项是否是子类
       // super 这个属性是与 Vue.extend 有关系的
-      if(Ctor.super) {
+      // if(Ctor.super) {
             // 递归调用了自身,此时参数是构造者的父类
-            const superOptions = resolveConstructorOptions(Ctor.super);
-      }
+            // const superOptions = resolveConstructorOptions(Ctor.super);
+      // }
 
       return options;
 }
