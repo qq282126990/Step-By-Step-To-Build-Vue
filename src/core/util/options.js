@@ -445,7 +445,7 @@ export function mergeOptions (
             const strat = strats[key] || defaultStrat;
             options[key] = strat(parent[key], child[key], vm, key);
       }
-
+      
       return options;
 }
 

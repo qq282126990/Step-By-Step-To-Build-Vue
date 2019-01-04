@@ -1,7 +1,8 @@
 /* @flow */
 import config from '../config';
 import { mark, measure } from '../util/perf';
-import { formatComponentName,mergeOptions } from '../util/index';
+import { formatComponentName, mergeOptions } from '../util/index';
+import { initProxy } from './proxy'
 
 let uid = 0;
 
@@ -53,11 +54,18 @@ export function initMixin (Vue: Class<Component>) {
                         vm
                   )
             }
-            vm.$options = mergeOptions(
-                  resolveConstructorOptions(vm.constructor),
-                  options || {},
-                  vm
-            )
+
+            /* istanbul ignore else */
+
+            // 非生产环境的话则执行 initProxy(vm) 函数
+            if (process.env.NODE_ENV !== 'production') {
+                  // 这个函数的主要作用其实就是在实例对象 vm 上添加 _renderProxy 属性
+                  initProxy(vm)
+            } else {
+                  // 在生产环境则直接在实例上添加 _renderProxy 实例属性，该属性的值就是当前实例
+                  vm._renderProxy = vm
+            }
+
 
             /* istanbul ignore if */
             // 在非生产环境下，并且 config.performance 和 mark 都为真，那么才执行里面的代码
@@ -74,15 +82,15 @@ export function initMixin (Vue: Class<Component>) {
 
 
 // 解析构造函数选项 options
-export function resolveConstructorOptions(Ctor: Class<Component>){
+export function resolveConstructorOptions (Ctor: Class<Component>) {
       // Ctor 即传递进来的参数vm.constructor = Vue的构造函数
       let options = Ctor.options;
 
       // 判断  当前选项是否是子类
       // super 这个属性是与 Vue.extend 有关系的
       // if(Ctor.super) {
-            // 递归调用了自身,此时参数是构造者的父类
-            // const superOptions = resolveConstructorOptions(Ctor.super);
+      // 递归调用了自身,此时参数是构造者的父类
+      // const superOptions = resolveConstructorOptions(Ctor.super);
       // }
 
       return options;
