@@ -1,5 +1,25 @@
 /* @flow */
 
+export function initEvents (vm: Component) {
+      // 在 vm 实例对象上添加两个实例属性 _events 和 _hasHookEvent ，
+      // 其中 _events 被初始化为一个空对象
+      // _hasHookEvent 的初始值为 false 
+      vm._events = Object.create(null)
+      vm._hasHookEvent = false
+
+
+      // init parent attached events
+      // 创建子组件实例的时候才会有这个参数选项
+      // const listeners = vm.$options._parentListeners
+      // if (listeners) {
+      //       updateComponentListeners(vm, listeners)
+      // }
+
+}
+
+
+
+
 export function eventsMixin (Vue: Class<Component>) {
 
       // 监听当前实例上的自定义事件。事件可以由vm.$emit触发。回调函数会接收所有传入事件触发函数的额外参数。

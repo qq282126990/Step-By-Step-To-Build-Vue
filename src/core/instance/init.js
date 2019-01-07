@@ -3,6 +3,10 @@ import config from '../config';
 import { mark, measure } from '../util/perf';
 import { formatComponentName, mergeOptions } from '../util/index';
 import { initProxy } from './proxy'
+import { initLifecycle,callHook } from './lifecycle'
+import { initEvents } from './events'
+import { initRender } from './render'
+import { initState } from './state'
 
 let uid = 0;
 
@@ -66,6 +70,24 @@ export function initMixin (Vue: Class<Component>) {
                   vm._renderProxy = vm
             }
 
+            // 在Vue实例对象 vm 上添加了 _self 属性，指向真实的实例本身
+            vm._self = vm
+            initLifecycle(vm)
+            initEvents(vm)
+            initRender(vm)
+
+            // 调用生命周期钩子函数
+            callHook(vm, 'beforeCreate')
+            // resolve injections before data/props
+            // initInjections(vm)
+
+            // 包括了：initProps、initMethods、initData、initComputed 以及 initWatch
+            // initState(vm)
+
+            // resolve provide after data/props
+            // initProvide(vm)
+
+            callHook(vm, 'created')
 
             /* istanbul ignore if */
             // 在非生产环境下，并且 config.performance 和 mark 都为真，那么才执行里面的代码

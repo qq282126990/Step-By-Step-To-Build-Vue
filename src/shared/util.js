@@ -135,3 +135,7 @@ const hasOwnProperty = Object.prototype.hasOwnProperty;
 export function hasOwn (obj: Object | Array<*>, key: string): boolean {
       return hasOwnProperty.call(obj, key);
 }
+
+// 创建一个空的冻结对象 emptyObject，
+// 这意味着 emptyObject 是不可扩展、不可配置、不可写的。
+export const emptyObject = Object.freeze({})
