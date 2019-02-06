@@ -3,7 +3,7 @@ import config from '../config';
 import { mark, measure } from '../util/perf';
 import { formatComponentName, mergeOptions } from '../util/index';
 import { initProxy } from './proxy'
-import { initLifecycle,callHook } from './lifecycle'
+import { initLifecycle, callHook } from './lifecycle'
 import { initEvents } from './events'
 import { initRender } from './render'
 import { initState } from './state'
@@ -99,6 +99,11 @@ export function initMixin (Vue: Class<Component>) {
                   measure(`vue ${vm._name} init`, startTag, endTag);
             }
 
+
+            // 到这一步时所有初始化已经完成
+            if (vm.$options.el) {
+                  vm.$mount(vm.$options.el)
+            }
       }
 }
 

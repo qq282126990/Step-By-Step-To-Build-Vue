@@ -9,6 +9,7 @@ import { initUse } from './use';
 import { initMixin } from './mixin';
 import { initExtend } from './extend';
 import { initAssetRegisters } from './assets';
+import { set, del } from '../observer/index'
 
 import {
       extend
@@ -41,10 +42,10 @@ export function initGlobalAPI (Vue: GlobalAPI) {
       }
 
       // 向响应式对象中添加一个属性，并确保这个新属性同样是响应式的，且触发视图更新。它必须用于向响应式对象上添加新属性，因为 Vue 无法探测普通的新增属性 (比如 this.myObject.newProperty = 'hi')
-      // Vue.set = set;
+      Vue.set = set;
 
       // 删除对象的属性。如果对象是响应式的，确保删除能触发更新视图。这个方法主要用于避开 Vue 不能检测到属性被删除的限制，但是你应该很少会使用它。
-      // Vue.delete = del;
+      Vue.delete = del;
 
       // 在下次 DOM 更新循环结束之后执行延迟回调。在修改数据之后立即使用这个方法，获取更新后的 DOM。
       // Vue.nextTick = nextTick;

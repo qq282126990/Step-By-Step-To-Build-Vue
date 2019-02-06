@@ -57,12 +57,19 @@ export function noop (a?: any, b?: any, c?: any) { };
 export const identity = (_: any) => _;
 
 /**
- * 创建纯函数的缓存版本。
+ * 为一个纯函数创建一个缓存版本的函数
+ * 
+ * 纯函数有一个特性，即输入不变则输出不变
  */
 export function cached<F: Function> (fn: F): F {
+      // 首先创建一个 cache 对象：
       const cache = Object.create(null);
+
+      // 随后返回一个函数：
       return (function cachedFn (str: string) {
+            // 这个函数与原函数 fn 的区别就在于：先读取缓存
             const hit = cache[str];
+            // 如果有命中则直接返回缓存的值，否则采用原函数 fn 计算一次并且设置缓存 返回结果
             return hit || (cache[str] = fn(str));
       }: any);
 }
@@ -139,3 +146,28 @@ export function hasOwn (obj: Object | Array<*>, key: string): boolean {
 // 创建一个空的冻结对象 emptyObject，
 // 这意味着 emptyObject 是不可扩展、不可配置、不可写的。
 export const emptyObject = Object.freeze({})
+
+// 判断给定变量是否是未定义，当变量值为 null 时，也会认为其未定义
+export function isUndef (v: any): boolean % checks {
+      return v === undefined || v === null
+}
+
+// 判断给定变量是否是原始类型值，即：string、number、boolean以及 symbol
+export function isPrimitive (value: any): boolean % checks  {
+      return (
+            typeof value === 'string' ||
+            typeof value === 'number' ||
+            // $flow-disable-line
+            typeof value === 'symbol' ||
+            typeof value === 'boolean'
+      )
+}
+
+// 判断给定变量的值是否是有效的数组索引。如果是有效的则返回 true，否则返回 false。
+export function isValidArrayIndex (val: any): boolean {
+      const n = parseFloat(String(val))
+
+      // n >= 0 && Math.floor(n) === n 保证了索引是一个大于等于 0 的整数
+      // isFinite(val) 保证了该值是有限的
+      return n >= 0 && Math.floor(n) === n && isFinite(val)
+}

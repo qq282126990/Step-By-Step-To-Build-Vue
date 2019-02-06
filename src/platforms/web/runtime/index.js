@@ -5,11 +5,12 @@ import Vue from '../../../core/index';
 import config from '../../../core/config';
 import { extend } from '../../../shared/util';
 import { inBrowser, isChrome, devtools } from '../../../core/util/index';
-
+import {query} from '../util/index'
 // 平台指令
 import platformDirectives from './directives/index';
 // 平台组件
 import platformComponents from './components/index';
+import { mountComponent } from '../../../core/instance/lifecycle'
 
 import {
       isReservedTag
@@ -42,13 +43,17 @@ extend(Vue.options.components, platformComponents);
 
 
 // public mount method
-// Vue.prototype.$mount = function (
-//       el?: string | Element,
-//       hydrating?: boolean
-// ): Component {
-//       el = el && inBrowser ? query(el) : undefined
-//       return mountComponent(this, el, hydrating)
-// }
+// 第一个参数 el 可以是一个字符串也可以是一个 DOM 元素
+// 第二个参数 hydrating 是用于 Virtual DOM 的补丁算法的
+Vue.prototype.$mount = function (
+      el?: string | Element,
+      hydrating?: boolean
+): Component {
+      // 判断当前环境是否是浏览器， 重写 el 
+      // query 根据给定的参数在 DOM 中查找对应的元素并返回
+      el = el && inBrowser ? query(el) : undefined
+      return mountComponent(this, el, hydrating)
+}
 
 // devtools global hook
 // vue-devtools 的全局钩子，它被包裹在 setTimeout 中

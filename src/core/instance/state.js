@@ -8,7 +8,11 @@ import {
       noop
 } from '../util/index'
 
-import {observe} from '../observer/index'
+import {
+      set,
+      del,
+      observe
+} from '../observer/index'
 
 export function stateMixin (Vue: Class<Component>) {
       // flow 不知何故有直接声明的定义对象的问题
@@ -39,6 +43,12 @@ export function stateMixin (Vue: Class<Component>) {
       // 就是 $data 和 $props 
       Object.defineProperty(Vue.prototype, '$data', dataDef);
       Object.defineProperty(Vue.prototype, '$props', propsDef);
+
+
+      Vue.prototype.$set = set
+      Vue.prototype.$delete = del
+
+
 }
 
 // 选项初始化的汇总，包括：props、methods、data、computed 和 watch 等

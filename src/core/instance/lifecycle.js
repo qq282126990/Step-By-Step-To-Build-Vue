@@ -3,6 +3,9 @@ import {
       handleError,
       emptyObject
 } from '../util/index'
+import { mark, measure } from '../util/perf'
+import Watcher from '../observer/watcher'
+
 // 定义 isUpdatingChildComponent，并初始化为 false
 export let isUpdatingChildComponent: boolean = false
 
@@ -38,6 +41,14 @@ export function lifecycleMixin (Vue: Class<Component>) {
 
       Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
 
+            if (!prevVnode) {
+                  // vm.$el 的值将被 vm.__patch__ 函数的返回值重写
+                  // initial render
+                  vm.$el = vm.__patch__(vm.$el, vnode, hydrating, false /* removeOnly */)
+            } else {
+                  // updates
+                  vm.$el = vm.__patch__(prevVnode, vnode)
+            }
       }
 
       // 迫使 Vue 实例重新渲染。注意它仅仅影响实例本身和插入插槽内容的子组件，而不是所有子组件。
@@ -126,6 +137,98 @@ export function callHook (vm: Component, hook: string) {
 
       if (vm._hasHookEvent) {
             vm.$emit('hook:' + hook)
+      }
+
+}
+
+
+/**
+ * 接受三个参数
+ * 组件实例 vm
+ * 挂在元素 el
+ * 透传过来的 hydrating
+ *  */
+export function mountComponent (
+      vm: Component,
+      el: ?Element,
+      hydrating?: boolean
+): Component {
+      // 在组件实例对象上添加 $el 属性，其值为挂载元素 el
+      vm.$el = el
+
+      // 首先检查渲染函数是否存在
+      if (!vm.$options.render) {
+            // 将 vm.$options.render 的值设置为 createEmptyVNode 函数，
+            // 也就是说此时渲染函数的作用将仅仅渲染一个空的 vnode 对象
+            vm.$options.render = createEmptyVNode
+            if (process.env.NODE_ENV !== 'production') {
+                  /* istanbul ignore if */
+                  if ((vm.$options.template && vm.$options.template.charAt(0) !== '#') ||
+                        vm.$options.el || el) {
+                        console.warn(
+                              'You are using the runtime-only build of Vue where the template ' +
+                              'compiler is not available. Either pre-compile the templates into ' +
+                              'render functions, or use the compiler-included build.',
+                              vm
+                        )
+                  } else {
+                        console.warn(
+                              'Failed to mount component: template or render function not defined.',
+                              vm
+                        )
+                  }
+            }
+
+            // 触发 beforeMount 生命周期钩子
+            callHook(vm, 'beforeMount')
+
+
+            // 组件开始挂载工作
+            // 定义并初始化 updateComponent 函数
+            // 这个函数将用作创建 Watcher 实例时传递给 Watcher 构造函数的第二个参数
+
+            let updateComponent
+
+            // 分别统计了 vm._render() 函数以及 vm._update() 函数的运行性能
+            if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
+                  updateComponent = () => {
+                        const name = vm._name
+                        const id = vm._uid
+                        const startTag = `vue-perf-start:${id}`
+                        const endTag = `vue-perf-end:${id}`
+
+                        mark(startTag)
+                        const vnode = vm._render()
+                        mark(endTag)
+                        measure(`vue ${name} render`, startTag, endTag)
+
+                        mark(startTag)
+                        vm._update(vnode, hydrating)
+                        mark(endTag)
+                        measure(`vue ${name} patch`, startTag, endTag)
+                  }
+            }
+            else {
+                  // 该函数的作用是以 vm._render() 函数的返回值作为第一个参数调用 vm._update() 函数
+                  // vm._render 函数的作用调用 vm.$options.render 函数并返回生成的虚拟节点
+                  // vm._update 函数作用吧 vm._render 函数生成的虚拟节点渲染成真正的 DOM
+                  // 把渲染函数生成的虚拟DOM渲染成真正的DOM
+                  updateComponent = () => {
+                        vm._update(vm._render(), hydrating)
+                  }
+            }
+
+
+            // 对 updateComponent 函数求值
+            // 渲染函数的观察者
+            new Watcher(vm, updateComponent, noop, {
+                  before () {
+                        if (vm._isMounted) {
+                              callHook(vm, 'beforeUpdate')
+                        }
+                  }
+            }, true /* isRenderWatcher */)
+
       }
 
 }

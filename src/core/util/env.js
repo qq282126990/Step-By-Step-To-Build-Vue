@@ -1,5 +1,10 @@
 /* @flow */
 
+// 用来检测当前环境是否可以使用对象的 __proto__ 属性
+// 我们知道，一个对象的 __proto__ 属性指向了它构造函数的原型
+// 但这是一个在 ES2015 中才被标准化的属性，IE11 及更高版本才能够使用
+export const hasProto = '__proto__' in {}
+
 // 判断浏览器环境
 export const inBrowser = typeof window !== 'undefined';
 export const UA = inBrowser && window.navigator.userAgent.toLowerCase();
