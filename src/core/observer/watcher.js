@@ -2,6 +2,7 @@
 import {
       parsePath,
 } from '../util/index'
+import { pushTarget } from './dep'
 
 export default class Watcher {
       /**
@@ -115,17 +116,76 @@ export default class Watcher {
       }
 
 
-
+      // 求值
+      // 第一个是能够触发访问器属性的 get 拦截器函数
+      // 第二个是能获取被观察目标的值，并且能够触发访问器属性的 get 拦截器函数是依赖被手机的关键
       get () {
-            // 省略...
+            // 将当前观察者实例对象作为参数传递
+            pushTarget(this)
+
+            // this.getter 函数的返回值
+            let value
+
+            const vm = this.vm
+
+            try {
+                  value = this.getter.call(vm, vm)
+            } catch (e) {
+
+            } finally {
+                  popTarget()
+                  // 清空 newDepIds 属性和 newDeps 属性的值
+                  this.cleanupDeps()
+            }
+
+
+
+            return value
       }
 
       addDep (dep: Dep) {
-            // 省略...
+            // 值为 Dep实例对象的唯一 id 值
+            const id = dep.id
+
+            // 避免手机重复依赖
+            // 检测该 Dep 实例对象是否已经存在于 newDepIds 中
+            // newDepIds 避免一次求值 过程中收集重复依赖
+            if (!this.newDepIds.has(id)) {
+                  // 同时将 dep.id 属性和 Dep实例对象本身分别添加到 newDepIds 和 newDeps 属性中
+                  this.newDepIds.add(id)
+                  this.newDeps.push(dep)
+
+                  // depIds 在多次求值中避免收集重复依赖
+                  // 多次求值是指当数据变化时重新求值的过程
+                  if (!this.depIds.has(id)) {
+                        dep.addSub(this)
+                  }
+            }
       }
 
       cleanupDeps () {
-            // 省略...
+            let i = this.deps.length
+
+            // 移除废弃的观测者
+            // 对 deps 数组进行遍历 对上次求值所收集到的 Dep 对象进行遍历
+            // 然后在循环内部检查上次求值所收集到的 Dep 实例对象是否存在于当前这次求值所收集到的 Dep 实例对象中
+            while (i--) {
+                  const dep = this.deps[i]
+                  if (!this.newDepIds.has(dep.id)) {
+                        dep.removeSub(this)
+                  }
+            }
+
+            // 引用类型变量交换值的过程
+            let tmp = this.depIds
+            this.depIds = this.newDepIds
+            this.newDepIds = tmp
+            this.newDepIds.clear()
+
+            tmp = this.deps
+            this.deps = this.newDeps
+            this.newDeps = tmp
+            this.newDeps.length = 0
       }
 
       update () {
@@ -145,7 +205,9 @@ export default class Watcher {
       }
 
       depend () {
-            // 省略...
+            if (Dep.target) {
+                  Dep.target.addDep(this)
+            }
       }
 
       teardown () {

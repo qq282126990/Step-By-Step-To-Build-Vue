@@ -171,3 +171,14 @@ export function isValidArrayIndex (val: any): boolean {
       // isFinite(val) 保证了该值是有限的
       return n >= 0 && Math.floor(n) === n && isFinite(val)
 }
+
+// 从数组中移除指定元素
+export function remove (arr: Array<any>, item: any): Array<any> | void {
+      if (arr.length) {
+            const index = arr.indexOf(item)
+
+            if (index > -1) {
+                  return arr.splice(index, 1)
+            }
+      }
+}
