@@ -1,4 +1,3 @@
-/* @flow */
 /* globals MessageChannel */
 import { isIOS, isNative } from './env'
 import { handleError } from './error'

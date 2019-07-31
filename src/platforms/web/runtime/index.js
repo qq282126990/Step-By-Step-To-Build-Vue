@@ -1,4 +1,3 @@
-/* @flow */
 
 // 为 Vue 添加全局的API，也就是静态的方法和属性
 import Vue from '../../../core/index';
@@ -49,7 +48,7 @@ Vue.prototype.$mount = function (
       el?: string | Element,
       hydrating?: boolean
 ): Component {
-      // 判断当前环境是否是浏览器， 重写 el 
+      // 判断当前环境是否是浏览器， 重写 el
       // query 根据给定的参数在 DOM 中查找对应的元素并返回
       el = el && inBrowser ? query(el) : undefined
       return mountComponent(this, el, hydrating)
@@ -93,12 +92,12 @@ if (inBrowser) {
 
 /**
  * 以上文件说明
- * 
+ *
  * 设置平台化的Vue.config
  * 在 Vue.options 上混合两个指令(directives),分别是 model 和 show
  * 在 Vue.options 上混合两个组件(components),分别是 Transition 和 TransitionGroup
  * 在 Vue.prototype 上添加两个方法 __patch__ 和 $mount
- * 
+ *
  */
 
 

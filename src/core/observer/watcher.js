@@ -1,4 +1,3 @@
-/* @flow */
 import {
     parsePath,
 } from '../util/index'

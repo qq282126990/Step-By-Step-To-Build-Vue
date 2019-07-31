@@ -16,7 +16,7 @@ import {
 } from '../util/index';
 
 export function initGlobalAPI (Vue: GlobalAPI) {
-      // 设置config 
+      // 设置config
       const configDef = {};
 
       configDef.get = () => config;

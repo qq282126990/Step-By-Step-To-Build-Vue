@@ -1,5 +1,3 @@
-/* @flow */
-
 import { remove } from '../util/index'
 
 export default class Dep {

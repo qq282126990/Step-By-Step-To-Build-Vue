@@ -31,7 +31,7 @@ declare class Component {
       _events: Object;
       _staticTrees: ?Array<VNode>; // v-once cached trees
       _vnode: ?VNode; // self root node
-      _watchers: Array<Watcher>;
+    //   _watchers: Array<Watcher>;
       _data: Object;
 
       // 生命周期

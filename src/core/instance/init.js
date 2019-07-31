@@ -1,4 +1,3 @@
-/* @flow */
 import config from '../config';
 import { mark, measure } from '../util/perf';
 import { formatComponentName, mergeOptions } from '../util/index';

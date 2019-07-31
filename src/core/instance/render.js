@@ -1,4 +1,3 @@
-/* @flow */
 
 import { installRenderHelpers } from './render-helpers/index';
 import { nextTick } from '../util/index'

@@ -1,4 +1,3 @@
-/* @flow */
 import {
     nextTick
   } from '../util/index'
