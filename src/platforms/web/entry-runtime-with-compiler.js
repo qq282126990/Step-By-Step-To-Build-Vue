@@ -168,20 +168,21 @@ import { render } from './render/render';
 // console.log(statefulComponentVNode)
 
 // 旧的 VNode
-const prevVNode = h(Fragment, null, [
-    h('p', null, '旧片段子节点 1'),
-    h('p', null, '旧片段子节点 2')
-  ])
+const prevVNode = h('div', null, [
+    h('p', null, '旧的子节点1'),
+    h('p', null, '旧的子节点2')
+])
 
-  // 新的 VNode
-  const nextVNode = h(Fragment, null, [
-    h('p', null, '新片段子节点 1'),
-    h('p', null, '新片段子节点 2')
-  ])
+// 新的 VNode
+const nextVNode = h('div', null, [
+    h('p', null, '新的子节点1'),
+    h('p', null, '新的子节点2'),
+    h('p', null, '新的子节点3')
+])
 
-  render(prevVNode, document.getElementById('app'))
+render(prevVNode, document.getElementById('app'))
 
-  // 2秒后更新
-  setTimeout(() => {
+// 2秒后更新
+setTimeout(() => {
     render(nextVNode, document.getElementById('app'))
-  }, 2000)
+}, 2000)

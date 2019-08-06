@@ -150,22 +150,89 @@ function mountPortal (vnode, container) {
 
 function mountStatefulComponent (vnode, container, isSVG) {
     // 创建组件实例
-    const instance = new vnode.tag();
-    // 渲染 vnode
-    instance.$vnode = instance.render()
-    // 挂载
-    mount(instance.$vnode, container, isSVG)
-    // el 属性值 和 组件实例的 $el 属性都引用组件的根DOM元素
-    instance.$el = vnode.$el = instance.$vnode.el
+    const instance = (vnode.children = new vnode.tag())
+    // 初始化 props
+    instance.$props = vnode.data
+
+
+    instance._update = function () {
+        // 如果 instance._mounted 为真，说明组件已挂载，应该执行更新操作
+        if (instance._mounted) {
+            // 更新
+            // 1、拿到旧的 VNode
+            const prevVNode = instance.$vnode
+
+
+            // 2、重渲染新的 VNode
+            const nextVNode = (instance.$vnode = instance.render())
+
+            // 3、patch 更新
+            patch(prevVNode, nextVNode, prevVNode.el.parentNode)
+            // 4、更新 vnode.el 和 $el
+            instance.$el = vnode.el = instance.$vnode.el
+        }
+        else {
+            // 1、渲染VNode
+            instance.$vnode = instance.render()
+            // 2、挂载
+            mount(instance.$vnode, container, isSVG)
+            // 3、组件已挂载的标识
+            instance._mounted = true
+            // 4、el 属性值 和 组件实例的 $el 属性都引用组件的根DOM元素
+            instance.$el = vnode.el = instance.$vnode.el
+            // 5、调用 mounted 钩子
+            instance.mounted && instance.mounted()
+
+        }
+    }
+
+
+    instance._update()
 }
 
 function mountFunctionalComponent (vnode, container, isSVG) {
-    // 获取 VNode
-    const $vnode = vnode.tag();
-    // 挂载
-    mount($vnode, container, isSVG)
-    // el 元素引用该组件的根元素
-    vnode.el = $vnode.el
+    // 在函数式组件类型的 vnode 上添加 handle 属性，它是一个对象
+    vnode.handle = {
+        // 存储旧的函数组件 vnode
+        prev: null,
+        // 存储新的 vnode
+        next: vnode,
+        container,
+        update: () => {
+            if (vnode.handle.prev) {
+                // 更新的逻辑写在这里
+                // prevVNode 是旧的组件VNode，nextVNode 是新的组件VNode
+                const prevVNode = vnode.handle.prev;
+                const nextVNode = vnode.handle.next
+                // prevTree 是组件产出的旧的 VNode
+                const prevTree = prevVNode.children;
+                // 更新props数据
+                const props = nextVNode.data
+
+                console.log(nextVNode)
+                // nextTree 是组件产生的新的vnode
+                const nextTree = (nextVNode.children = nextVNode.tag(props))
+                // 调用 patch 函数更新
+                patch(prevTree, nextTree, vnode.handle.container)
+            }
+            else {
+                // 获取 props
+                const props = vnode.data
+
+                // 获取 VNode
+                const $vnode = (vnode.children = vnode.tag(props));
+                // 挂载
+                mount($vnode, container, isSVG)
+                // el 元素引用该组件的根元素
+                vnode.el = $vnode.el
+            }
+
+        }
+    }
+
+
+    // 立即调用 vnode.handle.update 完成初次挂载
+    vnode.handle.update()
 }
 
 function mountComponent (vnode, container, isSVG) {
@@ -210,6 +277,13 @@ function mount (vnode, container, isSVG) {
 function replaceVNode (prevVNode, nextVNode, container) {
     // 将旧的 VNode 所渲染的 DOM 从容器中移除
     container.removeChild(prevVNode.el)
+    // 如果将要被移除的 VNode 类型是组件，则需要调用该组件实例的 unmounted 钩子函数
+    if (prevVNode.flags & VNodeFlags.COMPONENT_STATEFUL_NORMAL) {
+        // 类型为有状态组件的 vnode ,其children 属性被用来存储组件实例对象
+        const instance = prevVNode.children
+        instance.unmounted && instance.unmounted()
+    }
+
     // 再把新的 VNode 挂载到容器中
     mount(nextVNode, container)
 }
@@ -377,16 +451,47 @@ export function patchChildren (prevChildFlags, nextChildFlags, prevChildren, nex
                     break
                 // 新的 children 中有多个子节点
                 default:
-                    // 遍历旧的子节点，将其全部移除
-                    for (let i = 0; i < prevChildren.length; i++) {
-                        container.removeChild(prevChildren[i].el)
-                    }
-                    // 遍历新的子节点，将其全部添加
+                    // // 获取公共长度，取新旧 children 长度较小的那一个
+                    // const prevLen = prevChildren.length;
+                    // const nextLen = nextChildren.length;
+                    // const commonLength = prevLen > nextLen ? nextLen : prevLen
+
+                    // for (let i = 0; i < commonLength; i++) {
+                    //     patch(prevChildren[i], nextChildren[i], container)
+                    // }
+
+                    // // 如果 nextLen > prevLen，将多出来的元素添加
+                    // if (nextLen > prevLen) {
+                    //     for (let i = commonLength; i < nextLen; i++) {
+                    //         mount(nextChildren[i], container)
+                    //     }
+                    // }
+                    // else if (prevLen > nextLen) {
+                    //     // 如果 prevLen > nextLen，将多出来的元素移除
+                    //     for (let i = commonLength; i < prevLen; i++) {
+                    //         container.removeChild(prevChildren[i].el)
+                    //     }
+                    // }
+
+                    // 遍历新的 children
                     for (let i = 0; i < nextChildren.length; i++) {
-                        mount(nextChildren[i], container)
+                        const nextVNode = nextChildren[i]
+                        let j = 0;
+                        // 遍历旧的 children
+                        for (j; j < prevChildren.length; j++) {
+                            const prevVNode = prevChildren[i]
+                            // 如果找到了具有相同 key 值的两个节点，则调用 `patch` 函数更新之
+                            if (nextVNode.key === prevChildren.key) {
+                                patch(prevChildren, nextChildren, container)
+                                break;
+                            }
+                        }
                     }
+
                     break
             }
+
+            break
     }
 }
 
@@ -456,6 +561,35 @@ function patchPortal (prevVNode, nextVNode) {
                 }
                 break;
         }
+    }
+}
+
+// 更新组件
+function patchComponent (prevVNode, nextVNode, container) {
+    // tag 属性的值是组件类，通过对比新旧类是否相等来判断是否是相同的组件
+    if (nextVNode.tag !== prevVNode.tag) {
+        replaceVNode(prevVNode, nextVNode, container)
+    }
+    // 检测组件是否是有状态组件
+    else if (nextVNode.flags & VNodeFlags.COMPONENT_STATEFUL_NORMAL) {
+        // 获取组件实例
+        const instance = (nextVNode.children = prevVNode.children)
+        // 更新 props
+        instance.$props = nextVNode.data
+        // 更新组件
+        instance._update()
+    }
+    // 函数式组件的更新逻辑
+    else {
+        // 通过 prevVNode.handle 拿到 handle 对象
+        const handle = (nextVNode.handle = prevVNode.handle)
+        // 更新 handle 对象
+        handle.prev = prevVNode;
+        handle.next = nextVNode;
+        handle.container = container
+
+        // 调用 update
+        handle.update();
     }
 }
 
