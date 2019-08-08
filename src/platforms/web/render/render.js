@@ -552,25 +552,172 @@ export function patchChildren (prevChildFlags, nextChildFlags, prevChildren, nex
                     // }
                     // break
 
-
-                    // 更新相同的前缀节点
-                    // 指向旧 children 最后一个节点的索引
+                    //  j 为指向新旧 children 中第一个节点的索引
+                    let j = 0
+                    let prevVNode = prevChildren[j]
+                    let nextVNode = nextChildren[j]
                     let prevEnd = prevChildren.length - 1
-                    // 指向新 children 最后一个节点的索引
                     let nextEnd = nextChildren.length - 1
 
-                    prevVNode = prevChildren[prevEnd]
-                    nextVNode = nextChildren[nextEnd]
-
-                    // while 循环向后遍历，直到遇到拥有不同 key 值的节点为止
-                    while (prevVNode.key === nextVNode.key) {
-                        // 调用 patch 函数更新
-                        patch(prevVNode, nextVNode, container)
-                        prevEnd--
-                        nextEnd--
+                    outer: {
+                        // while 循环向后遍历, 直到遇到拥有不同key值的节点为止
+                        while (prevVNode.key === nextVNode.key) {
+                            // 调用 patch 函数更新
+                            patch(prevVNode, nextVNode, container)
+                            j++
+                            if (j > prevEnd || j > nextEnd) {
+                                break outer
+                            }
+                            prevVNode = prevChildren[j]
+                            nextVNode = nextChildren[j]
+                        }
 
                         prevVNode = prevChildren[prevEnd]
                         nextVNode = nextChildren[nextEnd]
+                        // while 循环向前遍历，直到遇到拥有不同 key 值得节点为止
+                        while (prevVNode.key === nextVNode.key) {
+                            // 调用 patch 函数更新
+                            patch(prevVNode, nextVNode, container)
+                            prevEnd--
+                            nextEnd--
+                            if (j > prevEnd || j > nextEnd) {
+                                break outer
+                            }
+                            prevVNode = prevChildren[prevEnd]
+                            nextVNode = nextChildren[nextEnd]
+                        }
+
+                    }
+
+
+                    // 满足条件， j-> nextend 之间的节点应作为新节点插入
+                    if (j > prevEnd && j <= nextEnd) {
+                        // 所有新节点应该插入到位于 nextPos 位置的节点的前面
+                        const nextPos = nextEnd + 1
+                        const refNode = nextPos < nextChildren.length ? nextChildren[nextPos].el : null
+
+                        // while 循环, 调用 mount 函数挂载节点
+                        while (j <= nextEnd) {
+                            mount(nextChildren[j++], container, false, refNode)
+                        }
+                    }
+                    // j > nextEnd j <= prevEnd 成立移除节点
+                    else if (j > nextEnd) {
+                        // j -> prevEnd 之间的节点应该被移除
+                        while (j <= prevEnd) {
+                            container.removeChild(prevChildren[j++].el)
+                        }
+                    }
+                    else {
+                        // 构造 source 数组
+                        // 新 children 中剩余未处理节点的数量
+                        const nextLeft = nextEnd - j + 1
+                        const source = []
+
+                        for (let i = 0; i < nextLeft; i++) {
+                            source.push(-1)
+                        }
+
+                        // source 存储新 children 中的节点在旧 children 中的位置
+                        // 后台将会使用它计算出一个最大递增序列
+
+                        const prevStart = j
+                        const nextStart = j
+                        let moved = false
+                        let pos = 0
+                        let patched = 0
+                        // 构建索引表
+                        const keyIndex = {}
+                        for (let i = nextStart; i <= nextEnd; i++) {
+                            keyIndex[nextChildren[i].key] = i
+                        }
+
+                        // 遍历旧 children
+                        for (let i = prevStart; i <= prevEnd; i++) {
+                            const prevVNode = prevChildren[i]
+
+                            // 已经更新过的节点数量应该小于新 children 中需要更新的节点数量
+                            if (patched < nextLeft) {
+                                // 通过索引表快速找到新 children 中具有相同 key 的节点的位置
+                                const k = keyIndex[prevVNode.key]
+
+                                if (typeof k !== 'undefined') {
+                                    nextVNode = nextChildren[k]
+
+                                    // patch 更新
+                                    patch(prevVNode, nextVNode, container)
+                                    patched++
+                                    // 更新 source 数组
+                                    source[k - nextStart] = i
+
+                                    // 判断是否需要移动
+                                    if (k < pos) {
+                                        moved = true
+                                    }
+                                    else {
+                                        pos = k
+                                    }
+                                }
+                                else {
+                                    // 没找到，说明旧节点在新 children 中已经不存在了，应该移除
+                                    container.removeChild(prevVNode.el)
+                                }
+                            }
+                            else {
+                                // 多余的节点，应该移除
+                                container.removeChild(prevVNode.el)
+                            }
+
+                        }
+
+                        // 是否需要移动 dom
+                        // 如果 moved 为真，则需要进行 DOM 移动操作
+                        if (moved) {
+                            const seq = lis(source)
+                            // j 指向最长递增子序列的最后一个值
+                            let j = seq.length - 1
+                            // 从后向前遍历新 children 中的剩余未处理节点
+                            for (let i = nextLeft - 1; i >= 0; i--) {
+                              if (source[i] === -1) {
+                                // 作为全新的节点挂载
+
+                                // 该节点在新 children 中的真实位置索引
+                                const pos = i + nextStart
+                                const nextVNode = nextChildren[pos]
+                                // 该节点下一个节点的位置索引
+                                const nextPos = pos + 1
+                                // 挂载
+                                mount(
+                                  nextVNode,
+                                  container,
+                                  false,
+                                  nextPos < nextChildren.length
+                                    ? nextChildren[nextPos].el
+                                    : null
+                                )
+                              } else if (i !== seq[j]) {
+                                // 说明该节点需要移动
+
+                                // 该节点在新 children 中的真实位置索引
+                                const pos = i + nextStart
+                                const nextVNode = nextChildren[pos]
+                                // 该节点下一个节点的位置索引
+                                const nextPos = pos + 1
+                                // 移动
+                                container.insertBefore(
+                                  nextVNode.el,
+                                  nextPos < nextChildren.length
+                                    ? nextChildren[nextPos].el
+                                    : null
+                                )
+                              } else {
+                                // 当 i === seq[j] 时，说明该位置的节点不需要移动
+                                // 并让 j 指向下一个位置
+                                j--
+                              }
+                            }
+                          }
+
                     }
 
 
@@ -738,4 +885,51 @@ export function render (vnode, container) {
             container.vnode = null
         }
     }
+}
+
+
+// [ 0, 8, 4, 12, 2, 10 ]
+function lis (arr) {
+    const p = arr.slice()
+    const result = [0]
+    let i
+    let j
+    let u
+    let v
+    let c
+    const len = arr.length
+    for (i = 0; i < len; i++) {
+        const arrI = arr[i]
+        if (arrI !== 0) {
+            j = result[result.length - 1]
+            if (arr[j] < arrI) {
+                p[i] = j
+                result.push(i)
+                continue
+            }
+            u = 0
+            v = result.length - 1
+            while (u < v) {
+                c = ((u + v) / 2) | 0
+                if (arr[result[c]] < arrI) {
+                    u = c + 1
+                } else {
+                    v = c
+                }
+            }
+            if (arrI < arr[result[u]]) {
+                if (u > 0) {
+                    p[i] = result[u - 1]
+                }
+                result[u] = i
+            }
+        }
+    }
+    u = result.length
+    v = result[u - 1]
+    while (u-- > 0) {
+        result[u] = v
+        v = p[v]
+    }
+    return result
 }
