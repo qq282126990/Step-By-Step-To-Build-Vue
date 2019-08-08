@@ -138,51 +138,22 @@ import { h, Fragment, Portal } from './render/h';
 import { render } from './render/render';
 
 
-// const elementVNode = h('div', null, h('span'))
-// const elementWithTextVNode = h('div', null, '我是文本')
-// const fragmentVNode = h(Fragment, null, [
-//     h('td'), h('td')
-// ])
-// const portalVNode = h(
-//     Portal,
-//     {
-//         target: '#box'
-//     },
-//     h('h1')
-// )
-// // 一个函数式组件
-// function MyFunctionalComponent () { }
-// // 传递给 h 函数的第一个参数就是组件函数本身
-// const functionalComponentVNode = h(MyFunctionalComponent, null, h('div'))
-
-// class Component {
-//     render () {
-//         throw '组件缺少 render 函数'
-//     }
-// }
-
-// // 有状态组件应该继承 Component
-// class MyStatefulComponent extends Component { }
-// const statefulComponentVNode = h(MyStatefulComponent, null, h('div'))
-
-// console.log(statefulComponentVNode)
-
 // 旧的 VNode
 const prevVNode = h('div', null, [
-    h('p', null, '旧的子节点1'),
-    h('p', null, '旧的子节点2')
-])
+    h('p', { key: 'a' }, '节点1'),
+    h('p', { key: 'b' }, '节点2'),
+    h('p', { key: 'c' }, '节点3')
+  ])
 
-// 新的 VNode
-const nextVNode = h('div', null, [
-    h('p', null, '新的子节点1'),
-    h('p', null, '新的子节点2'),
-    h('p', null, '新的子节点3')
-])
+  // 新的 VNode
+  const nextVNode = h('div', null, [
+    h('p', { key: 'a' }, '节点1'),
+    h('p', { key: 'c' }, '节点3')
+  ])
 
-render(prevVNode, document.getElementById('app'))
+  render(prevVNode, document.getElementById('app'))
 
-// 2秒后更新
-setTimeout(() => {
+  // 2秒后更新
+  setTimeout(() => {
     render(nextVNode, document.getElementById('app'))
-}, 2000)
+  }, 2000)

@@ -6,7 +6,7 @@ import { createTextVNode } from './h';
 const domPropsRe = /\W|^(?:value|checked|selected|muted)$/
 
 // 元素节点
-function mountElement (vnode, container, isSVG) {
+function mountElement (vnode, container, isSVG, refNode) {
     isSVG = isSVG || vnode.flags & VNodeFlags.ELEMENT_SVG;
 
     // 创建元素 处理 SVG 标签
@@ -80,7 +80,7 @@ function mountElement (vnode, container, isSVG) {
 
 
     // 将元素添加到容器
-    container.appendChild(el)
+    refNode ? container.insertBefore(el, refNode) : container.appendChild(el)
 }
 
 // 文本节点
@@ -248,12 +248,12 @@ function mountComponent (vnode, container, isSVG) {
 
 
 // 把一个 VNode 渲染成真实 DOM
-function mount (vnode, container, isSVG) {
+function mount (vnode, container, isSVG, refNode) {
     const { flags } = vnode;
 
     // 挂载普通标签
     if (flags & VNodeFlags.ELEMENT) {
-        mountElement(vnode, container, isSVG)
+        mountElement(vnode, container, isSVG, refNode)
     }
     // 挂载组件
     else if (flags & VNodeFlags.COMPONENT) {
@@ -374,7 +374,7 @@ export function patchData (el, key, prevValue, nextValue) {
                     el.addEventListener(key.slice(2), nextValue)
                 }
             }
-            else if (domPropsRE.test(key)) {
+            else if (domPropsRe.test(key)) {
                 // 当作 DOM Prop 处理
                 el[key] = nextValue
             }
@@ -436,59 +436,144 @@ export function patchChildren (prevChildFlags, nextChildFlags, prevChildren, nex
         // 旧的 childern 中有多个子节点
         default:
             switch (nextChildFlags) {
-                // 新的 children 也是单个子节点
                 case ChildrenFlags.SINGLE_VNODE:
-                    for (let i = 0; i < prevChildren.length; i++) {
-                        container.removeChild(prevChildren[i].el)
+                    switch (nextChildFlags) {
+                        case ChildrenFlags.SINGLE_VNODE:
+                            // 新的 children 也是单个子节点时，会执行该 case 语句块
+                            patch(prevChildren, nextChildren, container)
+                            break
+                        case ChildrenFlags.NO_CHILDREN:
+                            // 新的 children 中没有子节点时，会执行该 case 语句块
+                            container.removeChild(prevChildren.el)
+                            break
+                        default:
+                            // 但新的 children 中有多个子节点时，会执行该 case 语句块
+                            container.removeChild(prevChildren.el)
+                            for (let i = 0; i < nextChildren.length; i++) {
+                                mount(nextChildren[i], container)
+                            }
+                            break
                     }
-                    mount(nextChildren, container)
                     break
-                // 新的 children 没有子节点
+                // 旧的 children 中没有子节点时，会执行该 case 语句块
                 case ChildrenFlags.NO_CHILDREN:
-                    for (let i = 0; i < prevChildren.length; i++) {
-                        container.removeChild(prevChildren[i].el)
+                    switch (nextChildFlags) {
+                        case ChildrenFlags.SINGLE_VNODE:
+                            // 新的 children 是单个子节点时，会执行该 case 语句块
+                            mount(nextChildren, container)
+                            break
+                        case ChildrenFlags.NO_CHILDREN:
+                            // 新的 children 中没有子节点时，会执行该 case 语句块
+                            break
+                        default:
+                            // 但新的 children 中有多个子节点时，会执行该 case 语句块
+                            for (let i = 0; i < nextChildren.length; i++) {
+                                mount(nextChildren[i], container)
+                            }
+                            break
                     }
                     break
-                // 新的 children 中有多个子节点
                 default:
-                    // // 获取公共长度，取新旧 children 长度较小的那一个
-                    // const prevLen = prevChildren.length;
-                    // const nextLen = nextChildren.length;
-                    // const commonLength = prevLen > nextLen ? nextLen : prevLen
+                    // 当新的 children 中有多个子节点时，会执行该 case 语句块
+                    // let oldStartIdx = 0
+                    // let oldEndIdx = prevChildren.length - 1
+                    // let newStartIdx = 0
+                    // let newEndIdx = nextChildren.length - 1
+                    // let oldStartVNode = prevChildren[oldStartIdx]
+                    // let oldEndVNode = prevChildren[oldEndIdx]
+                    // let newStartVNode = nextChildren[newStartIdx]
+                    // let newEndVNode = nextChildren[newEndIdx]
 
-                    // for (let i = 0; i < commonLength; i++) {
-                    //     patch(prevChildren[i], nextChildren[i], container)
-                    // }
+                    // while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
+                    //     if (!oldStartVNode) {
+                    //         oldStartVNode = prevChildren[++oldStartIdx]
+                    //     } else if (!oldEndVNode) {
+                    //         oldEndVNode = prevChildren[--oldEndIdx]
+                    //     } else if (oldStartVNode.key === newStartVNode.key) {
+                    //         patch(oldStartVNode, newStartVNode, container)
+                    //         oldStartVNode = prevChildren[++oldStartIdx]
+                    //         newStartVNode = nextChildren[++newStartIdx]
+                    //     } else if (oldEndVNode.key === newEndVNode.key) {
+                    //         patch(oldEndVNode, newEndVNode, container)
+                    //         oldEndVNode = prevChildren[--oldEndIdx]
+                    //         newEndVNode = nextChildren[--newEndIdx]
+                    //     } else if (oldStartVNode.key === newEndVNode.key) {
+                    //         patch(oldStartVNode, newEndVNode, container)
+                    //         container.insertBefore(
+                    //             oldStartVNode.el,
+                    //             oldEndVNode.el.nextSibling
+                    //         )
+                    //         oldStartVNode = prevChildren[++oldStartIdx]
+                    //         newEndVNode = nextChildren[--newEndIdx]
+                    //     } else if (oldEndVNode.key === newStartVNode.key) {
+                    //         patch(oldEndVNode, newStartVNode, container)
+                    //         container.insertBefore(oldEndVNode.el, oldStartVNode.el)
+                    //         oldEndVNode = prevChildren[--oldEndIdx]
+                    //         newStartVNode = nextChildren[++newStartIdx]
+                    //     }
+                    //     else {
+                    //         // 遍历旧 children，试图寻找与 newStartVNode 拥有相同 key 值的元素
+                    //         const idxInOld = prevChildren.findIndex(
+                    //             node => node.key === newStartVNode.key
+                    //         )
 
-                    // // 如果 nextLen > prevLen，将多出来的元素添加
-                    // if (nextLen > prevLen) {
-                    //     for (let i = commonLength; i < nextLen; i++) {
-                    //         mount(nextChildren[i], container)
+                    //         if (idxInOld >= 0) {
+                    //             // vnodeToMove 就是在旧 children 中找到的节点，该节点所对应的真实 DOM 应该被移动到最前面
+                    //             const vnodeToMove = prevChildren[idxInOld]
+                    //             // 调用 patch 函数完成更新
+                    //             patch(vnodeToMove, newStartVNode, container)
+                    //             // 把 vnodeToMove.el 移动到最前面，即 oldStartVNode.el 的前面
+                    //             container.insertBefore(vnodeToMove.el, oldStartVNode.el)
+                    //             // 由于旧 children 中该位置的节点所对应的真实 DOM 已经被移动，所以将其设置为 undefined
+                    //             prevChildren[idxInOld] = undefined
+                    //         }
+                    //         else {
+                    //             // 使用 mount 函数挂载新节点
+                    //             mount(newStartVNode, container, false, oldStartVNode.el)
+                    //         }
+
+                    //         // 将 newStartIdx 下移一位
+                    //         newStartVNode = nextChildren[++newStartIdx]
                     //     }
                     // }
-                    // else if (prevLen > nextLen) {
-                    //     // 如果 prevLen > nextLen，将多出来的元素移除
-                    //     for (let i = commonLength; i < prevLen; i++) {
+
+                    // // 还有节点没完成
+                    // if (oldEndIdx < oldStartIdx) {
+                    //     // 添加新节点
+                    //     for (let i = newStartIdx; i <= newEndIdx; i++) {
+                    //         mount(nextChildren[i], container, false, oldStartVNode.el)
+                    //     }
+                    // }
+                    // else if (newEndIdx < newStartIdx) {
+                    //     // 移除操作
+                    //     for (let i = oldStartIdx; i <= oldEndIdx; i++) {
                     //         container.removeChild(prevChildren[i].el)
                     //     }
                     // }
+                    // break
 
-                    // 遍历新的 children
-                    for (let i = 0; i < nextChildren.length; i++) {
-                        const nextVNode = nextChildren[i]
-                        let j = 0;
-                        // 遍历旧的 children
-                        for (j; j < prevChildren.length; j++) {
-                            const prevVNode = prevChildren[i]
-                            // 如果找到了具有相同 key 值的两个节点，则调用 `patch` 函数更新之
-                            if (nextVNode.key === prevChildren.key) {
-                                patch(prevChildren, nextChildren, container)
-                                break;
-                            }
-                        }
+
+                    // 更新相同的前缀节点
+                    // 指向旧 children 最后一个节点的索引
+                    let prevEnd = prevChildren.length - 1
+                    // 指向新 children 最后一个节点的索引
+                    let nextEnd = nextChildren.length - 1
+
+                    prevVNode = prevChildren[prevEnd]
+                    nextVNode = nextChildren[nextEnd]
+
+                    // while 循环向后遍历，直到遇到拥有不同 key 值的节点为止
+                    while (prevVNode.key === nextVNode.key) {
+                        // 调用 patch 函数更新
+                        patch(prevVNode, nextVNode, container)
+                        prevEnd--
+                        nextEnd--
+
+                        prevVNode = prevChildren[prevEnd]
+                        nextVNode = nextChildren[nextEnd]
                     }
 
-                    break
+
             }
 
             break
