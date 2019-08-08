@@ -137,30 +137,80 @@
 import { h, Fragment, Portal } from './render/h';
 import { render } from './render/render';
 
-// 旧的 VNode
-const prevVNode = h('div', null, [
-    h('p', { key: 'a' }, '节点1'),
-    h('p', { key: 'b' }, '节点2'),
-    h('p', { key: 'c' }, '节点3'),
-    h('p', { key: 'd' }, '节点4'),
-    h('p', { key: 'f' }, '节点6'),
-    h('p', { key: 'h' }, '节点8'),
-    h('p', { key: 'e' }, '节点5')
-  ])
+const { createRenderer } = createRenderer({
+    nodeOps: {
+        createElement (tag, isSVG) {
+            const customElement = {
+                type: 'ELEMENT',
+                tag,
+                parentNode: null,
+                children: [],
+                props: {},
+                eventListeners: {},
+                text: null
+            }
+            return customElement
+        },
+        removeChild (parent, child) {
+            // 找到将要移除的元素 child 在父元素的 children 中的位置
+            const i = parent.children.indexOf(child)
+            if (i > -1) {
+                // 如果找到了，则将其删除
+                parent.children.splice(i, 1)
+            }
+            else {
+                // 没找到，说明渲染器出了问题，
+                // 例如没有在 nodeOps.appendChild 函数中维护正确的父子关系等
+                // 这时需要打印错误信息，以提示开发者
+                console.error('target: ', child)
+                console.error('parent: ', parent)
+                throw Error('target 不是 parent 的子节点')
+            }
 
-  // 新的 VNode
-  const nextVNode = h('div', null, [
-    h('p', { key: 'a' }, 'new 节点1'),
-    h('p', { key: 'c' }, 'new 节点3'),
-    h('p', { key: 'd' }, 'new 节点4'),
-    h('p', { key: 'b' }, 'new 节点2'),
-    h('p', { key: 'g' }, 'new 节点7'),
-    h('p', { key: 'e' }, 'new 节点5')
-  ])
-
-  render(prevVNode, document.getElementById('app'))
-
-  // 2秒后更新
-  setTimeout(() => {
-    render(nextVNode, document.getElementById('app'))
-  }, 2000)
+            // 清空父子链
+            child.parentNode = null
+        },
+        createText (text) {
+            const customElement = {
+                type: 'TEXT',
+                parentNode: null,
+                text: text
+            }
+            return customElement
+        },
+        setText (node, text) {
+            node.nodeValue = text
+        },
+        appendChild (parent, child) {
+            child.parentNode = parent
+            parent.children.push(child)
+        },
+        insertBefore (parent, child, ref) {
+            parent.insertBefore(child, ref)
+        },
+        parentNode (node) {
+            return node.parentNode
+        },
+        nextSibling (node) {
+            return node.nextSibling
+        },
+        querySelector (selector) {
+            return document.querySelector(selector)
+        }
+    },
+    patchData (
+        el,
+        key,
+        prevValue,
+        nextValue
+    ) {
+        // 将属性添加到元素的 props 对象下
+        el.props[key] = nextValue
+        // 我们将属性名字中前两个字符是 'o' 和 'n' 的属性认为是事件绑定
+        if (key[0] === 'o' && key[1] === 'n') {
+            // 如果是事件，则将事件添加到元素的 eventListeners 对象下
+            const event = key.slice(2).toLowerCase()
+                ; (el.eventListeners || (el.eventListeners = {}))[event] = nextValue
+        }
+    }
+})
